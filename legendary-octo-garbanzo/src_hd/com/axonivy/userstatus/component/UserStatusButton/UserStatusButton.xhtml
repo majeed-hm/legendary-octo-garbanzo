@@ -1,0 +1,139 @@
+<html xmlns="http://www.w3.org/1999/xhtml"
+	xmlns:f="http://xmlns.jcp.org/jsf/core" 
+	xmlns:h="http://xmlns.jcp.org/jsf/html"
+	xmlns:ui="http://xmlns.jcp.org/jsf/facelets"
+	xmlns:cc="http://xmlns.jcp.org/jsf/composite"
+	xmlns:ic="http://ivyteam.ch/jsf/component"
+	xmlns:p="http://primefaces.org/ui"
+	xmlns:pe="http://primefaces.org/ui/extensions"
+	xmlns:c="http://java.sun.com/jsp/jstl/core">
+<cc:interface componentType="IvyComponent">
+</cc:interface>
+
+<cc:implementation>
+	<div class="ui-fluid" id="#{cc.clientId}">
+		<p:commandLink id="lnkSetStatusButton" 
+				actionListener="#{userStatusBean.updateUserStatusPropertie}" 
+				update="dlgUserStatus" 
+				oncomplete="PF('dlgUserStatus').show();" 
+				title="#{userStatusBean.userStatus.statusText}">
+			<i class="fa #{userStatusBean.userStatus.statusIcon}" />
+			<h:outputText value="#{userStatusBean.abbreviate(userStatusBean.userStatus.statusText, 20)}" 
+					rendered="#{not empty userStatusBean.userStatus.statusText}"/>
+			<h:outputText value="Set status" 
+					rendered="#{empty userStatusBean.userStatus.statusText}"/>
+		</p:commandLink>
+		
+		<p:dialog id="dlgUserStatus" header="Edit status" 
+				widgetVar="dlgUserStatus" appendTo="@(body)"
+				closeOnEscape="true" resizable="false" 
+				width="400px" modal="true" draggable="false" dynamic="true">
+			<h:form id="userStatusForm">
+				<div class="ui-fluid">
+					<div class="ui-g-12 ui-md-12">
+						<div class="ui-inputgroup">
+							<span class="ui-inputgroup-addon">
+								<p:commandLink id="lnkSetStatus" type="button" 
+										onclick="PF('btnHiddenSetStatus').jq.click();">
+									<i class="fa fa-fw #{userStatusBean.statusIcon}" />
+								</p:commandLink>
+								<p:commandButton id="btnHiddenSetStatus" 
+										widgetVar="btnHiddenSetStatus" type="button" 
+										styleClass="ui-helper-hidden-accessible" />
+							</span>
+							<p:inputTextarea id="itxStatusText" widgetVar="itxStatusText"
+									placeholder="What's happening?" 
+									value="#{userStatusBean.statusText}" rows="1" counter="display" 
+									counterTemplate="{0} character(s) remaining" autoResize="false" maxlength="80"
+									onfocus="if(PF('itxStatusText').jq.val() == '') PF('pnlSuggestions').show(); else PF('pnlSuggestions').close();"
+									onkeyup="if(PF('itxStatusText').jq.val() == '') PF('pnlSuggestions').show(); else PF('pnlSuggestions').close();"/>
+						</div>
+						<h:outputText id="display" class="p-d-block" style="font-size: 12px; margin-left: 40px"/>
+					</div>
+					<div class="ui-g-12 ui-md-12 no-border-panel">
+						<p:panel id="pnlSuggestions" widgetVar="pnlSuggestions" 
+								visible="false" closable="true" closeSpeed="0" style="border: none;">
+							<div class="ui-g-12 ui-md-12">
+								<p:outputLabel value="Suggestions:" style="font-size: 12px" />
+							</div>
+							<c:forEach items="#{userStatusBean.mapSuggestions}" var="entry">
+								<div class="ui-g-12 ui-md-6">
+									<p:commandLink actionListener="#{userStatusBean.setSuggestion(entry)}" 
+											update="lnkSetStatus itxStatusText" global="false" >
+										<i class="fa fa-fw #{entry.key}" />
+										<h:outputText value=" #{entry.value}" style="font-size: 12px"/>
+									</p:commandLink>
+								</div>
+							</c:forEach>
+						</p:panel>
+					</div>
+					<div class="ui-g-12 ui-md-12">
+						<p:separator />
+					</div>
+					<p:panelGrid columns="2" columnClasses="ui-g-12 ui-md-4,ui-g-12 ui-md-8" 
+							layout="grid" styleClass="ui-panelgrid-blank ui-fluid">
+						<p:outputLabel value="Clear Status" for="somClearStatus"/>
+						<p:selectOneMenu id="somClearStatus" value="#{userStatusBean.statusExpiration}" var="s" height="250">
+							<p:column>
+								<h:outputText value="#{ivy.cms.co(s.messageKey)}" />
+								<h:panelGroup rendered="#{s eq 'NEVER'}">
+									<BR/>
+									<h:outputText value="#{ivy.cms.co('/enums/com.axonivy.addon.userstatus.enums.UserStatusExpiration/NEVER/description')}" 
+											style="font-size: 12px"/>
+								</h:panelGroup>
+							</p:column>
+							<f:selectItems value="#{userStatusBean.listStatusExpirations}" var="expiration"
+								itemLabel="#{ivy.cms.co(expiration.messageKey)}" itemValue="#{expiration}"/>
+						</p:selectOneMenu>
+					</p:panelGrid>
+					<div class="ui-g-12 ui-md-12">
+						<p:separator />
+					</div>
+					<p:panelGrid columns="2" columnClasses="ui-g-12 ui-md-6,ui-g-12 ui-md-6" 
+							layout="grid" styleClass="ui-panelgrid-blank ui-fluid">
+						<p:commandButton value="Set Status" 
+								icon="fa fa-info-circle" 
+								accesskey="enter" 
+								actionListener="#{userStatusBean.saveUserStatus}"
+								update="#{cc.clientId}:lnkSetStatusButton"
+								oncomplete="PF('dlgUserStatus').hide();" />
+						<p:commandButton value="Clear Status" 
+								icon="fa fa-info-circle" 
+								actionListener="#{userStatusBean.clearUserStatus}" 
+								update="#{cc.clientId}:lnkSetStatusButton"
+								oncomplete="PF('dlgUserStatus').hide();"/>
+					</p:panelGrid>
+				</div>
+			</h:form>
+			
+			<p:overlayPanel id="pnlStatusIcons" widgetVar="pnlStatusIcons" dynamic="false" 
+					for="userStatusForm:btnHiddenSetStatus" style="width:320px" appendTo="@(body)">
+				<h:form id="statusIconsForm">
+					<p:tabView scrollable="true">
+						<c:forEach items="#{userStatusBean.statusIconsByTab}" var="entry">
+							<p:tab>
+								<f:facet name="title">
+									<i class="fa fa-fw #{entry.key}" />
+								</f:facet>
+								<p:scrollPanel mode="native" style="height:200px">
+									<p:panelGrid columns="7" layout="grid" styleClass="ui-panelgrid-blank ui-fluid">
+										<p:repeat value="#{entry.value}" var="icon">
+											<p:commandLink title="#{icon.label}" global="false"
+													actionListener="#{userStatusBean.setStatusIcon(icon.className)}" 
+													update="#{cc.clientId}:userStatusForm:lnkSetStatus" 
+													oncomplete="PF('pnlStatusIcons').hide();">
+												<i class="fa fa-fw #{icon.className}" />
+											</p:commandLink>
+										</p:repeat>
+									</p:panelGrid>
+								</p:scrollPanel>
+							</p:tab>
+						</c:forEach>
+					</p:tabView>
+				</h:form>
+			</p:overlayPanel>
+		</p:dialog>
+	</div>
+	
+</cc:implementation>
+</html>
